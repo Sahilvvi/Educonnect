@@ -38,7 +38,7 @@ export default function ParentAnnouncementsPage() {
                 `)
                 .eq('parent_id', parentProfile?.id)
 
-            const schoolIds = [...new Set(children?.map(c => c.students?.school_id).filter(Boolean))]
+            const schoolIds = [...new Set((children as any)?.map((c: any) => c.students?.school_id).filter(Boolean))]
 
             // Fetch announcements for those schools targeting parents
             const { data } = await supabase
