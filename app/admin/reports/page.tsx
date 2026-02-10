@@ -143,7 +143,7 @@ export default function ReportsPage() {
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
-                                        label={(entry) => `${entry.grade}: ${entry.students}`}
+                                        label={(entry: any) => `${entry.grade}: ${entry.students}`}
                                         outerRadius={80}
                                         fill="#8884d8"
                                         dataKey="students"
