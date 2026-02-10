@@ -85,6 +85,29 @@ export default async function StudentDashboard() {
         ? Math.round(((presentCount || 0) / totalAttendance) * 100)
         : 100 // Default to 100 if no records
 
+    // 4. Fetch Next Class from Timetable
+    const now = new Date()
+    const currentDay = now.getDay()
+    const currentTime = now.toTimeString().slice(0, 5)
+
+    const { data: nextClass } = await supabase
+        .from('timetable_slots')
+        .select(`
+            *,
+            teacher_profiles (
+                full_name
+            )
+        `)
+        .eq('class_id', student.class_id)
+        .eq('is_active', true)
+        .or(`day_of_week.eq.${currentDay},day_of_week.gt.${currentDay}`)
+        .order('day_of_week')
+        .order('start_time')
+        .limit(1)
+        .maybeSingle()
+
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
             <StudentNavbar studentName={student.name} />
@@ -128,8 +151,20 @@ export default async function StudentDashboard() {
                             <Clock className="h-4 w-4 text-purple-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-purple-600">--</div>
-                            <p className="text-xs text-muted-foreground">Timetable coming soon</p>
+                            {nextClass ? (
+                                <>
+                                    <div className="text-2xl font-bold text-purple-600">{nextClass.subject}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {DAYS[nextClass.day_of_week]} • {nextClass.start_time}
+                                        {nextClass.teacher_profiles && ` • ${nextClass.teacher_profiles.full_name}`}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-2xl font-bold text-gray-400">N/A</div>
+                                    <p className="text-xs text-muted-foreground">No upcoming classes</p>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>

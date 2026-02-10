@@ -51,13 +51,8 @@ export default async function TeacherDashboard() {
     const classTeacherOf = Array.isArray(classObj) ? classObj[0]?.name : classObj?.name
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <TeacherNavbar
-                teacherName={teacherProfile.full_name}
-                teacherEmail={user.email}
-            />
-
-            <div className="container mx-auto px-4 py-8">
+        <div className="min-h-screen bg-slate-50 flex flex-col">
+            <div className="container mx-auto px-6 py-8">
                 {/* Welcome Section */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">

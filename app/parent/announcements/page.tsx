@@ -1,99 +1,122 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import { ParentNavbar } from '@/components/dashboard/ParentNavbar'
-import { AnnouncementCard } from '@/components/communication/AnnouncementCard'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+'use client'
 
-export default async function AnnouncementsPage() {
-    const supabase = await createClient()
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Loader2, Megaphone, AlertCircle } from 'lucide-react'
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) redirect('/login')
+export default function ParentAnnouncementsPage() {
+    const [announcements, setAnnouncements] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
 
-    const { data: parentProfile } = await supabase
-        .from('parent_profiles')
-        .select('id, full_name')
-        .eq('user_id', user.id)
-        .single()
+    const supabase = createClient()
 
-    // 1. Get user's linked items to find what schools they are part of
-    const { data: linkedStudents } = await supabase
-        .from('parent_student_mapping')
-        .select(`
-            student_id,
-            students (
-                school_id
-            )
-        `)
-        .eq('parent_id', parentProfile?.id)
+    useEffect(() => {
+        fetchAnnouncements()
+    }, [])
 
-    const schoolIds = linkedStudents?.map((item: any) => item.students?.school_id).filter(Boolean) || []
+    const fetchAnnouncements = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return
 
-    // 2. Fetch announcements for those schools
-    let realAnnouncements: any[] = []
+            // Get parent profile
+            const { data: parentProfile } = await supabase
+                .from('parent_profiles')
+                .select('id')
+                .eq('user_id', user.id)
+                .single()
 
-    if (schoolIds.length > 0) {
-        const { data } = await supabase
-            .from('announcements')
-            .select(`
-                *,
-                schools (
-                    name
-                )
-            `)
-            .in('school_id', schoolIds)
-            .eq('is_published', true)
-            .order('published_at', { ascending: false })
+            // Get children to find their schools
+            const { data: children } = await supabase
+                .from('parent_student_mapping')
+                .select(`
+                    students (
+                        school_id
+                    )
+                `)
+                .eq('parent_id', parentProfile?.id)
 
-        if (data) {
-            realAnnouncements = data.map((item: any) => ({
-                ...item,
-                school_name: item.schools?.name || 'School',
-                author_name: 'School Admin' // Simplified for MVP
-            }))
+            const schoolIds = [...new Set(children?.map(c => c.students?.school_id).filter(Boolean))]
+
+            // Fetch announcements for those schools targeting parents
+            const { data } = await supabase
+                .from('announcements')
+                .select('*')
+                .in('school_id', schoolIds)
+                .contains('target_audience', ['parents'])
+                .eq('is_published', true)
+                .order('created_at', { ascending: false })
+
+            setAnnouncements(data || [])
+        } catch (error) {
+            console.error('Error fetching announcements:', error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'urgent': return 'bg-red-100 text-red-800 border-red-200'
+            case 'high': return 'bg-orange-100 text-orange-800 border-orange-200'
+            case 'normal': return 'bg-blue-100 text-blue-800 border-blue-200'
+            case 'low': return 'bg-gray-100 text-gray-800 border-gray-200'
+            default: return 'bg-gray-100 text-gray-800 border-gray-200'
         }
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <ParentNavbar parentName={parentProfile?.full_name || 'Parent'} />
+        <div className="container mx-auto px-4 py-8">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">School Announcements</h1>
+                <p className="text-gray-500">Important updates and announcements from the school</p>
+            </div>
 
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
-                <h1 className="text-3xl font-bold mb-2">Announcements</h1>
-                <p className="text-gray-600 mb-8">Latest updates from all your children&apos;s schools</p>
-
-                <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="mb-6">
-                        <TabsTrigger value="all">All Updates</TabsTrigger>
-                        <TabsTrigger value="urgent">Urgent</TabsTrigger>
-                        <TabsTrigger value="academic">Academic</TabsTrigger>
-                        <TabsTrigger value="events">Events</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="all" className="space-y-4">
-                        {realAnnouncements.map(announcement => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} />
-                        ))}
-                    </TabsContent>
-
-                    <TabsContent value="urgent" className="space-y-4">
-                        {realAnnouncements.filter(a => a.priority === 'urgent' || a.priority === 'high').map(announcement => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} />
-                        ))}
-                    </TabsContent>
-
-                    <TabsContent value="academic" className="space-y-4">
-                        {realAnnouncements.filter(a => a.announcement_type === 'academic').map(announcement => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} />
-                        ))}
-                    </TabsContent>
-
-                    <TabsContent value="events" className="space-y-4">
-                        {realAnnouncements.filter(a => a.announcement_type === 'event').map(announcement => (
-                            <AnnouncementCard key={announcement.id} announcement={announcement} />
-                        ))}
-                    </TabsContent>
-                </Tabs>
+            <div className="space-y-4">
+                {loading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    </div>
+                ) : announcements.length === 0 ? (
+                    <Card>
+                        <CardContent className="flex flex-col items-center justify-center h-64 text-gray-500">
+                            <Megaphone className="h-12 w-12 mb-4 text-gray-400" />
+                            <p>No announcements available at the moment</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    announcements.map((announcement) => (
+                        <Card key={announcement.id}>
+                            <CardHeader>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <CardTitle className="text-xl">{announcement.title}</CardTitle>
+                                            <Badge className={getPriorityColor(announcement.priority)}>
+                                                {announcement.priority === 'urgent' && <AlertCircle className="h-3 w-3 mr-1" />}
+                                                {announcement.priority.toUpperCase()}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                            {new Date(announcement.created_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-gray-700 whitespace-pre-wrap">{announcement.content}</p>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
         </div>
     )

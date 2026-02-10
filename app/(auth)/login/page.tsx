@@ -37,7 +37,7 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
 
     // Check if redirected from signup
-    const justVerified = searchParams.get('verified') === 'false'
+    const justVerified = searchParams?.get('verified') === 'false'
 
     const form = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -124,6 +124,10 @@ function LoginForm() {
                         router.push('/admin/dashboard')
                         return
                     }
+                    if (roleData.role === 'super_admin') {
+                        router.push('/super-admin/dashboard')
+                        return
+                    }
                     // Fallback for others if table exists
                 }
 
@@ -161,63 +165,65 @@ function LoginForm() {
                     </Alert>
                 )}
 
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        placeholder="your.email@example.com"
-                                        type="email"
-                                        {...field}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Password</FormLabel>
-                                <FormControl>
-                                    <div className="relative">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
                                         <Input
-                                            type={showPassword ? 'text' : 'password'}
-                                            placeholder="••••••••"
+                                            placeholder="your.email@example.com"
+                                            type="email"
                                             {...field}
                                         />
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? (
-                                                <EyeOff className="h-4 w-4 text-gray-400" />
-                                            ) : (
-                                                <Eye className="h-4 w-4 text-gray-400" />
-                                            )}
-                                        </Button>
-                                    </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
-                    <Button type="submit" disabled={isLoading} className="w-full" size="lg">
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Login
-                    </Button>
-                </form>
+                        <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Password</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <Input
+                                                type={showPassword ? 'text' : 'password'}
+                                                placeholder="••••••••"
+                                                {...field}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                {showPassword ? (
+                                                    <EyeOff className="h-4 w-4 text-gray-400" />
+                                                ) : (
+                                                    <Eye className="h-4 w-4 text-gray-400" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <Button type="submit" disabled={isLoading} className="w-full" size="lg">
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Login
+                        </Button>
+                    </form>
+                </Form>
             </CardContent>
             <CardFooter className="flex-col gap-2">
                 <div className="text-sm text-center">
@@ -232,13 +238,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-    return (
-        <Suspense fallback={
-            <div className="flex justify-center items-center h-[500px]">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            </div>
-        }>
-            <LoginForm />
-        </Suspense>
-    )
+    return <LoginForm />
 }

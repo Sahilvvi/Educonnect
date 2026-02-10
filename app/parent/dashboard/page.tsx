@@ -43,6 +43,10 @@ export default async function ParentDashboard() {
           name,
           logo_url,
           theme_color
+        ),
+        classes (
+          id,
+          name
         )
       )
     `)
@@ -56,19 +60,51 @@ export default async function ParentDashboard() {
         .order('created_at', { ascending: false })
         .limit(10)
 
-    // Transform children data for display
-    const children = (childrenData || []).map((item: any) => ({
-        id: item.students.id,
-        full_name: item.students.full_name,
-        student_id: item.students.student_id,
-        school_name: item.students.schools?.name || 'Unknown School',
-        school_logo_url: item.students.schools?.logo_url,
-        school_theme_color: item.students.schools?.theme_color || '#3B82F6',
-        class_name: 'Class 5A', // Placeholder - we'll add classes table later
-        attendance_percentage: 85, // Placeholder
-        pending_homework: 3, // Placeholder
-        pending_fees: 0, // Placeholder
-        relationship: item.relationship,
+    // Transform children data with real-time stats
+    const children = await Promise.all((childrenData || []).map(async (item: any) => {
+        const studentId = item.students.id
+        const classId = item.students.class_id
+
+        // Get attendance records for this student
+        const { data: attendanceRecords } = await supabase
+            .from('attendance_records')
+            .select('status')
+            .eq('student_id', studentId)
+
+        const totalRecords = attendanceRecords?.length || 0
+        const presentRecords = attendanceRecords?.filter((r: any) => r.status === 'present').length || 0
+        const attendancePercentage = totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0
+
+        // Get pending homework count for this class
+        const { count: pendingHomework } = await supabase
+            .from('homework_assignments')
+            .select('*', { count: 'exact', head: true })
+            .eq('class_id', classId)
+            .eq('status', 'published')
+            .gte('due_date', new Date().toISOString())
+
+        // Get pending fees for this student
+        const { data: feeRecords } = await supabase
+            .from('fee_records')
+            .select('amount')
+            .eq('student_id', studentId)
+            .eq('status', 'pending')
+
+        const pendingFeesTotal = feeRecords?.reduce((sum: number, record: any) => sum + (record.amount || 0), 0) || 0
+
+        return {
+            id: item.students.id,
+            full_name: item.students.full_name,
+            student_id: item.students.student_id,
+            school_name: item.students.schools?.name || 'Unknown School',
+            school_logo_url: item.students.schools?.logo_url,
+            school_theme_color: item.students.schools?.theme_color || '#3B82F6',
+            class_name: item.students.classes?.name || 'Not Assigned',
+            attendance_percentage: attendancePercentage,
+            pending_homework: pendingHomework || 0,
+            pending_fees: pendingFeesTotal,
+            relationship: item.relationship,
+        }
     }))
 
     const stats = {

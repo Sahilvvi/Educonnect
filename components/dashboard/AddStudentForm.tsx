@@ -58,11 +58,12 @@ export function AddStudentForm({ classes, schoolId }: { classes: any[], schoolId
                 .from('students')
                 .insert({
                     name: data.name,
+                    full_name: data.name,
                     roll_number: data.roll_number,
                     email: data.email || null,
                     class_id: data.class_id,
                     school_id: schoolId,
-                    dob: data.dob,
+                    date_of_birth: data.dob,
                     is_active: true,
                 })
 
