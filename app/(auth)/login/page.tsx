@@ -238,5 +238,13 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-    return <LoginForm />
+    return (
+        <Suspense fallback={
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
+    )
 }

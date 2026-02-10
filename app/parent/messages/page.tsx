@@ -28,10 +28,16 @@ export default function ParentMessagesPage() {
         subject: '',
         body: ''
     })
+    const [currentUser, setCurrentUser] = useState<any>(null)
 
     const supabase = createClient()
 
     useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            setCurrentUser(user)
+        }
+        getUser()
         fetchMessages()
     }, [])
 
@@ -182,8 +188,7 @@ export default function ParentMessagesPage() {
                     </Card>
                 ) : (
                     messages.map((message) => {
-                        const { data: { user } } = supabase.auth.getUser()
-                        const isReceived = message.recipient_id === user?.id
+                        const isReceived = message.recipient_id === currentUser?.id
 
                         return (
                             <Card

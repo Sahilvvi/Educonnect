@@ -57,7 +57,9 @@ export default function AdminTeachersPage() {
                 .from('teacher_profiles')
                 .select('*')
                 .eq('school_id', roleData?.school_id)
-                .order('full_name')setTeachers(data || [])
+                .order('full_name')
+
+            setTeachers(data || [])
             setFilteredTeachers(data || [])
         } catch (error) {
             console.error('Error fetching teachers:', error)
